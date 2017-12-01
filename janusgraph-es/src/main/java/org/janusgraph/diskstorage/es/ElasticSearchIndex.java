@@ -1011,10 +1011,14 @@ public class ElasticSearchIndex implements IndexProvider {
         return false;
     }
 
+    // A special character to use instead of whitespace, which is not allowed in field names. See #777.
+    private char REPLACEMENT_CHAR = '\u2022';
+
     @Override
     public String mapKey2Field(String key, KeyInformation information) {
-        Preconditions.checkArgument(!StringUtils.containsAny(key,new char[]{' '}),"Invalid key name provided: %s",key);
-        return key;
+        Preconditions.checkArgument(!StringUtils.containsAny(key, new char[]{ REPLACEMENT_CHAR }),
+            "Invalid key name containing reserved character • provided: %s", key);
+        return key.replace(' ', REPLACEMENT_CHAR);
     }
 
     @Override

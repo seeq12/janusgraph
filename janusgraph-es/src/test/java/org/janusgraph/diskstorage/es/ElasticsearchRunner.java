@@ -37,7 +37,7 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
     private final String homedir;
 
     private static final Logger log =
-            LoggerFactory.getLogger(ElasticsearchRunner.class);
+        LoggerFactory.getLogger(ElasticsearchRunner.class);
 
     public static final String ES_PID_FILE = "/tmp/janusgraph-test-es.pid";
 
@@ -46,7 +46,8 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
     public ElasticsearchRunner(String esHome) {
         final Pattern VERSION_PATTERN = Pattern.compile("elasticsearch.version=(.*)");
         String version = null;
-        try (InputStream in = ElasticsearchRunner.class.getClassLoader().getResourceAsStream("janusgraph-es.properties")) {
+        try (InputStream in = ElasticsearchRunner.class.getClassLoader()
+            .getResourceAsStream("janusgraph-es.properties")) {
             if (in != null) {
                 try (Scanner s = new Scanner(in)) {
                     s.useDelimiter("\\A");
@@ -77,7 +78,12 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
     protected void killImpl(ElasticsearchStatus stat) throws IOException {
         log.info("Killing {} pid {}...", getDaemonShortName(), stat.getPid());
 
-        runCommand("/bin/kill", String.valueOf(stat.getPid()));
+        String pid = String.valueOf(stat.getPid());
+        if (isWindows()) {
+            runCommand("taskkill", "/F", "/PID", pid);
+        } else {
+            runCommand("/bin/kill", pid);
+        }
 
         log.info("Sent SIGTERM to {} pid {}", getDaemonShortName(), stat.getPid());
 
@@ -109,7 +115,13 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
             FileUtils.deleteDirectory(logs);
         }
 
-        runCommand(homedir + File.separator + "bin" + File.separator + "elasticsearch", "-d", "-p", ES_PID_FILE);
+        String startupScript = "elasticsearch";
+
+        if (isWindows()) {
+            startupScript += ".bat";
+        }
+
+        runCommand(homedir + File.separator + "bin" + File.separator + startupScript, "-d", "-p", ES_PID_FILE);
         try {
             watchLog(" started", 60L, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -117,6 +129,10 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
         }
 
         return readStatusFromDisk();
+    }
+
+    private boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("windows");
     }
 
     @Override
@@ -162,7 +178,9 @@ public class ElasticsearchRunner extends DaemonRunner<ElasticsearchStatus> {
 
     /**
      * Start Elasticsearch process, load GraphOfTheGods, and stop process. Used for integration testing.
-     * @param args a singleton array containing a path to a JanusGraph config properties file
+     *
+     * @param args
+     *         a singleton array containing a path to a JanusGraph config properties file
      */
     public static void main(String[] args) {
         final ElasticsearchRunner runner = new ElasticsearchRunner();

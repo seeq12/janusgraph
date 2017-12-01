@@ -207,4 +207,14 @@ public class ElasticSearchIndexTest extends IndexProviderTest {
         assertEquals(0, tx.query(new IndexQuery("vertex", PredicateCondition.of(TEXT, Text.CONTAINS, "bob"))).size());
         assertEquals(1, tx.query(new IndexQuery("vertex", PredicateCondition.of(TEXT, Text.CONTAINS, "world"))).size());
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testMapKey2Field_IllegalCharacter() {
+        index.mapKey2Field("here is an illegal character: •", null);
+    }
+
+    @Test
+    public void testMapKey2Field_MappingSpaces() {
+        assertEquals("field•name•with•spaces", index.mapKey2Field("field name with spaces", null));
+    }
 }
